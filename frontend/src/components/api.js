@@ -1,17 +1,26 @@
 const BASE_URL = "http://localhost:5000";
 
+const requestJson = async (url, options) => {
+  const response = await fetch(url, options);
+  const json = await response.json();
+  if (!response.ok || json.success === false) {
+    throw new Error(json.message || json.messages?.join(', ') || 'The server rejected the request.');
+  }
+  return json;
+};
+
 
 // GET all tasks
 export const getTasks = () => {
 
   const token = localStorage.getItem("token");
 
-  return fetch(`${BASE_URL}/tasks`, {
+  return requestJson(`${BASE_URL}/tasks`, {
     method: "GET",
     headers: {
       Authorization: `Bearer ${token}`
     }
-  }).then(res => res.json());
+  });
 };
 
 
@@ -20,7 +29,7 @@ export const createTask = (task) => {
 
   const token = localStorage.getItem("token");
 
-  return fetch(`${BASE_URL}/tasks`, {
+  return requestJson(`${BASE_URL}/tasks`, {
     method: "POST",
 
     headers: {
@@ -30,7 +39,7 @@ export const createTask = (task) => {
 
     body: JSON.stringify(task)
 
-  }).then(res => res.json());
+  });
 };
 
 
@@ -39,7 +48,7 @@ export const updateTask = (id, task) => {
 
   const token = localStorage.getItem("token");
 
-  return fetch(`${BASE_URL}/tasks/${id}`, {
+  return requestJson(`${BASE_URL}/tasks/${id}`, {
     method: "PUT",
 
     headers: {
@@ -49,7 +58,7 @@ export const updateTask = (id, task) => {
 
     body: JSON.stringify(task)
 
-  }).then(res => res.json());
+  });
 };
 
 
@@ -58,12 +67,12 @@ export const deleteTask = (id) => {
 
   const token = localStorage.getItem("token");
 
-  return fetch(`${BASE_URL}/tasks/${id}`, {
+  return requestJson(`${BASE_URL}/tasks/${id}`, {
     method: "DELETE",
 
     headers: {
       Authorization: `Bearer ${token}`
     }
 
-  }).then(res => res.json());
+  });
 };

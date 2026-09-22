@@ -1,6 +1,12 @@
 const mongoose = require('mongoose');
 
 const taskSchema = new mongoose.Schema({
+  user: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true,
+    index: true
+  },
   title: {
     type: String,
     required: [true, 'Task title is required'],
@@ -12,6 +18,11 @@ const taskSchema = new mongoose.Schema({
   completed: {
     type: Boolean,
     default: false
+  },
+  status: {
+    type: String,
+    enum: ['pending', 'ongoing', 'complete'],
+    default: 'pending'
   },
 
   priority: {
@@ -28,7 +39,7 @@ const taskSchema = new mongoose.Schema({
   }
 });
 
-taskSchema.pre('save', function(next) {
+taskSchema.pre('save', function() {
   if (this.title) {
     this.title = this.title.trim();
   }
