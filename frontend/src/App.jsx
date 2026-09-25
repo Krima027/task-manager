@@ -140,5 +140,11 @@ export default function App() {
 
 function TaskRow({ task, onStatusChange, onDelete }) {
   const currentStatus = task.status || (task.completed ? 'complete' : 'pending');
-  return <li className={`task-row status-${currentStatus}`}><button type="button" className="status-toggle" onClick={() => onStatusChange(task)} aria-label={`Change ${task.title} status. Current status: ${currentStatus}`}><span className="status-dot" aria-hidden="true" /></button><span className={currentStatus === 'complete' ? 'task-title complete-title' : 'task-title'}>{task.title}</span><span className="status-label">{currentStatus}</span><button type="button" className="delete-button" onClick={() => onDelete(task._id)} aria-label={`Delete ${task.title}`}>×</button></li>;
+  const createdAt = task.createdAt ? new Date(task.createdAt).toLocaleString([], {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit'
+  }) : '';
+  return <li className={`task-row status-${currentStatus}`}><button type="button" className="status-toggle" onClick={() => onStatusChange(task)} aria-label={`Change ${task.title} status. Current status: ${currentStatus}`}><span className="status-dot" aria-hidden="true" /></button><span className={currentStatus === 'complete' ? 'task-title complete-title' : 'task-title'}>{task.title}</span>{createdAt && <time className="task-timestamp" dateTime={task.createdAt} title={`Created ${createdAt}`}>{createdAt}</time>}<span className="status-label">{currentStatus}</span><button type="button" className="delete-button" onClick={() => onDelete(task._id)} aria-label={`Delete ${task.title}`}>×</button></li>;
 }
