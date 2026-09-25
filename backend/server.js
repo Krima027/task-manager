@@ -85,6 +85,25 @@ app.post('/auth/login', async (req, res, next) => {
   }
 });
 
+app.post('/auth/reset-password', async (req, res, next) => {
+  try {
+    const email = req.body.email?.trim().toLowerCase();
+    const password = req.body.password;
+    if (!email || !password || password.length < 6) {
+      return res.status(400).json({ success: false, message: 'Enter a valid email and a password of at least 6 characters' });
+    }
+
+    const user = await User.findOne({ email });
+    if (!user) return res.status(404).json({ success: false, message: 'No account was found with that email' });
+
+    user.password = await bcrypt.hash(password, 10);
+    await user.save();
+    res.json({ success: true, message: 'Password reset successfully. You can now sign in.' });
+  } catch (err) {
+    next(err);
+  }
+});
+
 
 app.use((req, res, next) => {
   if (

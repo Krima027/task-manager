@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { createTask, deleteTask, getTasks, updateTask } from './components/api';
+import { createTask, deleteTask, getTasks, resetPassword, updateTask } from './components/api';
 import './index.css';
 
 const statuses = [
@@ -12,12 +12,15 @@ export default function App() {
   const [token, setToken] = useState(() => localStorage.getItem('token'));
   const [email, setEmail] = useState(() => localStorage.getItem('userEmail') || '');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [showRegister, setShowRegister] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [tasks, setTasks] = useState([]);
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
   useEffect(() => {
     if (!token) return;
@@ -30,7 +33,19 @@ export default function App() {
 
   const submitAuth = async (event) => {
     event.preventDefault();
-    setError('');
+    setError(''); setSuccess('');
+    if (showForgotPassword) {
+      if (password !== confirmPassword) {
+        setError('Passwords do not match.');
+        return;
+      }
+      try {
+        const json = await resetPassword(email, password);
+        setShowForgotPassword(false); setShowRegister(false); setPassword(''); setConfirmPassword('');
+        setSuccess(json.message);
+      } catch (err) { setError(err.message || 'Could not reset your password.'); }
+      return;
+    }
     const endpoint = showRegister ? 'register' : 'login';
     try {
       const response = await fetch(`http://localhost:5000/auth/${endpoint}`, {
@@ -87,12 +102,13 @@ export default function App() {
 
   if (!token) return <main className="auth-shell"><section className="auth-card">
     <h1>Task Manager</h1>
-    <div className="auth-tabs"><button className={!showRegister ? 'active' : ''} onClick={() => { setShowRegister(false); setError(''); }}>Sign in</button><button className={showRegister ? 'active' : ''} onClick={() => { setShowRegister(true); setError(''); }}>Register</button></div>
-    <form onSubmit={submitAuth} className="auth-form"><label>Email address<input type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@example.com" required /></label><label>Password<input type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="At least 6 characters" minLength="6" required /></label>{error && <p className="error-message">{error}</p>}<button className="primary-button" type="submit">{showRegister ? 'Create my workspace' : 'Enter workspace'} <span>→</span></button></form>
+    {!showForgotPassword && <div className="auth-tabs"><button className={!showRegister ? 'active' : ''} onClick={() => { setShowRegister(false); setError(''); setSuccess(''); }}>Sign in</button><button className={showRegister ? 'active' : ''} onClick={() => { setShowRegister(true); setError(''); setSuccess(''); }}>Register</button></div>}
+    <form onSubmit={submitAuth} className="auth-form"><label>Email address<input type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@example.com" required /></label><label>{showForgotPassword ? 'New password' : 'Password'}<input type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="At least 6 characters" minLength="6" required /></label>{showForgotPassword && <label>Confirm new password<input type="password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} placeholder="Enter the new password again" minLength="6" required /></label>}{error && <p className="error-message">{error}</p>}{success && <p className="success-message">{success}</p>}<button className="primary-button" type="submit">{showForgotPassword ? 'Reset password' : showRegister ? 'Create my workspace' : 'Enter workspace'} <span>→</span></button></form>
+    <button className="text-button" type="button" onClick={() => { setShowForgotPassword(!showForgotPassword); setShowRegister(false); setError(''); setSuccess(''); setPassword(''); setConfirmPassword(''); }}>{showForgotPassword ? 'Back to sign in' : 'Forgot password?'}</button>
   </section></main>;
 
   return <main className="app-shell"><div className="app-frame">
-    <header className="topbar"><button className="logout-button" onClick={handleLogout}>Log out</button></header>
+    <header className="topbar"><h1 className="app-title">Task Manager</h1><button className="logout-button" onClick={handleLogout}>Log out</button></header>
     <form onSubmit={handleCreate} className="new-task-form"><input value={newTaskTitle} onChange={(event) => setNewTaskTitle(event.target.value)} placeholder="Add a task..." aria-label="New task title" minLength="3" required /><button className="primary-button" type="submit" disabled={isCreating}>{isCreating ? 'Adding...' : 'Add task'} <span>+</span></button></form>
     {error && <p className="error-message page-error">{error}</p>}
     {isLoading ? <p className="empty-state">Loading...</p> : <div className="task-sections">{(() => {

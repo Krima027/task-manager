@@ -76,3 +76,10 @@ export const deleteTask = (id) => {
 
   });
 };
+
+// RESET PASSWORD
+export const resetPassword = (email, password) => requestJson(`${BASE_URL}/auth/reset-password`, {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ email, password })
+});
