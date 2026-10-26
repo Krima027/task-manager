@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
+const nodemailer = require('nodemailer');
 require('dotenv').config();
 
 const Task = require('./models/tasks');
@@ -11,6 +12,32 @@ const User = require('./models/users');
 const app = express();
 const PORT = process.env.PORT || 5000;
 const JWT_SECRET = process.env.JWT_SECRET || 'task-manager-development-secret';
+const notificationRecipient = 'prestonarmstrong806@gmail.com';
+const mailTransporter = process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS
+  ? nodemailer.createTransport({
+    host: process.env.SMTP_HOST,
+    port: Number(process.env.SMTP_PORT || 465),
+    secure: process.env.SMTP_SECURE !== 'false',
+    auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
+  })
+  : null;
+
+const sendNotification = async (subject, text) => {
+  if (!mailTransporter) {
+    console.warn('Email notification skipped: configure SMTP_HOST, SMTP_USER, and SMTP_PASS.');
+    return;
+  }
+  try {
+    await mailTransporter.sendMail({
+      from: process.env.SMTP_FROM || process.env.SMTP_USER,
+      to: notificationRecipient,
+      subject,
+      text
+    });
+  } catch (err) {
+    console.error('Email notification failed:', err.message);
+  }
+};
 
 
 mongoose
@@ -79,6 +106,7 @@ app.post('/auth/login', async (req, res, next) => {
     if (!user || !(await bcrypt.compare(req.body.password || '', user.password))) {
       return res.status(401).json({ success: false, message: 'Email or password is incorrect' });
     }
+    void sendNotification('Task Manager: login', `A login occurred for ${user.email} at ${new Date().toLocaleString()}.`);
     res.json({ success: true, token: createToken(user), user: { email: user.email } });
   } catch (err) {
     next(err);
@@ -98,6 +126,7 @@ app.post('/auth/reset-password', async (req, res, next) => {
 
     user.password = await bcrypt.hash(password, 10);
     await user.save();
+    void sendNotification('Task Manager: password reset', `The password for ${user.email} was reset at ${new Date().toLocaleString()}.`);
     res.json({ success: true, message: 'Password reset successfully. You can now sign in.' });
   } catch (err) {
     next(err);
@@ -173,6 +202,7 @@ app.post('/tasks', authenticate, async (req, res, next) => {
       status,
       completed: status === 'complete'
     });
+    void sendNotification('Task Manager: task added', `A task was added for ${req.user.email}: ${task.title}`);
 
     res.status(201).json({
       success: true,
@@ -203,6 +233,13 @@ app.put('/tasks/:id', authenticate, async (req, res, next) => {
     }
 
     const { title, description, priority, status } = req.body;
+    const previousTask = await Task.findOne({ _id: req.params.id, user: req.user.userId });
+    if (!previousTask) {
+      return res.status(404).json({
+        error: 'Not Found',
+        message: `Task with id ${req.params.id} not found.`
+      });
+    }
 
     // runValidators ensures schema rules apply on update too
     const task = await Task.findOneAndUpdate(
@@ -216,6 +253,9 @@ app.put('/tasks/:id', authenticate, async (req, res, next) => {
         error: 'Not Found',
         message: `Task with id ${req.params.id} not found.`
       });
+    }
+    if (status === 'complete' && previousTask.status !== 'complete' && !previousTask.completed) {
+      void sendNotification('Task Manager: task completed', `Task completed by ${req.user.email}: ${task.title}`);
     }
 
     res.status(200).json({
