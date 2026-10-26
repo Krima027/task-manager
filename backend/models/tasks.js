@@ -10,6 +10,7 @@ const taskSchema = new mongoose.Schema({
   title: {
     type: String,
     required: [true, 'Task title is required'],
+    trim: true,
     minlength: [3, 'Task title cannot be less than 3 characters']
   },
   description: {
@@ -39,10 +40,8 @@ const taskSchema = new mongoose.Schema({
   }
 });
 
-taskSchema.pre('save', function() {
-  if (this.title) {
-    this.title = this.title.trim();
-  }
+taskSchema.pre('validate', function() {
+  this.completed = this.status === 'complete';
 });
 
 module.exports = mongoose.model('Task', taskSchema);
